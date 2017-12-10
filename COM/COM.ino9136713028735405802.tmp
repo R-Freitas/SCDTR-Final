@@ -56,7 +56,7 @@ void setup() {
   }
 
   t_0=micros();
-  while(diff<500000)
+  while(diff<500)
   {
     diff=micros()-t_0;
   }
@@ -79,6 +79,7 @@ void loop() {
     
   Serial.println("Os enderecos sao:");
   for (j=0;j<found_elements;j++){
+    Serial.println(j);
     Serial.println(elements[j].endereco);
   }
   
@@ -111,6 +112,7 @@ void receiveEvent(int numBytes){
 }
 
 void sort_copy (arduino_info* arr, int size){
+  
   for (int k=0; k<(size-1);k++){
     for (int w=0; w<(size-(k+1));w++){
       if (arr[w].endereco > arr[w+1].endereco){
