@@ -75,12 +75,6 @@ void setup() {
     if (elements[calibre_count].endereco == address){
       analogWrite(LedPin,255);  //liga led
       
-      t_0=micros();//Waits to ensure everything is read (se calhar considerar resposta para garantir comunicação)
-      diff=0;
-      while(diff<1000000){
-        diff=micros()-t_0;
-      }
-      
       while (control != 0){ //Transmite mensagem para os outros colocarem a escuta
         Wire.beginTransmission(0);
         Wire.write("CS");        
@@ -89,11 +83,18 @@ void setup() {
       control=1;
       
       sampleADC(&elements[calibre_count]);  //Lê valores
+
+      Serial.print("Endereco: ");
+      Serial.print(elements[calibre_count].endereco);
+      Serial.print("\t");
+      Serial.print("Ganho: ");
+      Serial.println(elements[calibre_count].ganho);
       
       t_0=micros();//Waits to ensure everything is read (se calhar considerar resposta para garantir comunicação)
       diff=0;
       while(diff<1000000){
         diff=micros()-t_0;
+        Serial.println("HEY");
       }
       
       analogWrite(LedPin,0);//Desliga Led
@@ -106,7 +107,7 @@ void setup() {
       control=1;
       
       calibre_count++; //incrementa
-
+    
     }
     else{
       if (recolhe_valores == 1){
@@ -116,29 +117,29 @@ void setup() {
       }
       digitalWrite(LED_BUILTIN,LOW);
     }
-  
   }
   
   
-  Serial.println("Setup ended");
-  //digitalWrite(LED_BUILTIN,HIGH);
-   
+  
+  Wire.beginTransmission(0);
+  Wire.write('F');        
+  control = Wire.endTransmission(true);  
 }
 
 void loop() {
-  Serial.print(" \n");
+
+  /*
+  Serial.println("Os enderecos sao:");
   for (j=0;j<found_elements;j++){
     Serial.print("Endereco: ");
     Serial.print(elements[j].endereco);
     Serial.print("\t");
     Serial.print("Ganho: ");
-    Serial.print(elements[j].ganho);
-    Serial.print("\t");
-    Serial.println(j);
+    Serial.println(elements[j].ganho);
   }
   
   delay(500);
-  
+  */
   
 }
 
@@ -154,6 +155,11 @@ void receiveEvent(int numBytes){
       elements[found_elements].endereco= request[1];
       found_elements++;
       t_0=micros();
+      break;
+      
+    case 'F':
+      Serial.println("Setup ended");
+      //digitalWrite(LED_BUILTIN,HIGH);
       break;
     
     case 'C':
@@ -195,7 +201,5 @@ void sampleADC(arduino_info* arr)
   Value /= 10;
   arr[0].ganho=Value;
 }
-
-
 
 

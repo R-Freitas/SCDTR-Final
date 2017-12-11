@@ -57,7 +57,6 @@ void setup() {
     Wire.write(address);        
     control = Wire.endTransmission(true);
   }
-  control=1;
 
   t_0=micros();
   while(diff<500000)
@@ -74,71 +73,54 @@ void setup() {
   while (calibre_count<found_elements){
     if (elements[calibre_count].endereco == address){
       analogWrite(LedPin,255);  //liga led
-      
-      t_0=micros();//Waits to ensure everything is read (se calhar considerar resposta para garantir comunicação)
-      diff=0;
-      while(diff<1000000){
-        diff=micros()-t_0;
-      }
-      
       while (control != 0){ //Transmite mensagem para os outros colocarem a escuta
         Wire.beginTransmission(0);
         Wire.write("CS");        
-        control = Wire.endTransmission(true); 
+        control = Wire.endTransmission(true);
       }
-      control=1;
       
       sampleADC(&elements[calibre_count]);  //Lê valores
       
-      t_0=micros();//Waits to ensure everything is read (se calhar considerar resposta para garantir comunicação)
-      diff=0;
-      while(diff<1000000){
+      t_0=micros(); //Waits to ensure everything is read (se calhar considerar resposta para garantir comunicação)
+      while(diff<250000){
         diff=micros()-t_0;
       }
       
-      analogWrite(LedPin,0);//Desliga Led
+      analogWrite(LedPin,255);//Desliga Led
       
       while (control != 0){ //Transmite mensagem de flag para sairem de escuta
         Wire.beginTransmission(0);
         Wire.write("CE");        
         control = Wire.endTransmission(true);
       }
-      control=1;
       
       calibre_count++; //incrementa
-
+    
     }
     else{
       if (recolhe_valores == 1){
         digitalWrite(LED_BUILTIN,HIGH);
         sampleADC(&elements[calibre_count]);
-        //talvez apenas evocar uma vez, discutir com o duarte ou seja apos o adc meter recolhe_valores=0
       }
-      digitalWrite(LED_BUILTIN,LOW);
     }
-  
   }
   
   
-  Serial.println("Setup ended");
-  //digitalWrite(LED_BUILTIN,HIGH);
-   
+  
+  Wire.beginTransmission(0);
+  Wire.write('F');        
+  control = Wire.endTransmission(true);  
 }
 
 void loop() {
-  Serial.print(" \n");
+
+    
+  Serial.println("Os enderecos sao:");
   for (j=0;j<found_elements;j++){
-    Serial.print("Endereco: ");
-    Serial.print(elements[j].endereco);
-    Serial.print("\t");
-    Serial.print("Ganho: ");
-    Serial.print(elements[j].ganho);
-    Serial.print("\t");
-    Serial.println(j);
+    Serial.println(elements[j].endereco);
   }
   
   delay(500);
-  
   
 }
 
@@ -154,6 +136,11 @@ void receiveEvent(int numBytes){
       elements[found_elements].endereco= request[1];
       found_elements++;
       t_0=micros();
+      break;
+      
+    case 'F':
+      Serial.println("Setup ended");
+      //digitalWrite(LED_BUILTIN,HIGH);
       break;
     
     case 'C':
@@ -186,16 +173,15 @@ void sort_copy (arduino_info* arr, int size){
 }
 
 void sampleADC(arduino_info* arr)
-{ 
+{
   double Value = 0;
   for (int k=0;k<10;k++)
   {
     Value += analogRead(LDRPin);
+    delay(10);
   } 
   Value /= 10;
   arr[0].ganho=Value;
 }
-
-
 
 
