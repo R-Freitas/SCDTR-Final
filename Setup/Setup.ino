@@ -18,17 +18,13 @@ arduino_info elements[N_ELEMENTS];
 byte control=1;
 unsigned long t_0,diff;
 int recolhe_valores=0, calibre_count=0;
+int PWM_Calibre=255;
 
 
 void setup() {
   Serial.begin(9600);
   Serial.println("Begin Setup");
   pinMode(LED_BUILTIN, OUTPUT);
-  
-  digitalWrite(LED_BUILTIN,HIGH);
-  delay(500);
-  digitalWrite(LED_BUILTIN,LOW);
-
   pinMode(2,INPUT_PULLUP);
   pinMode(3,INPUT_PULLUP);
   pinMode(4,INPUT_PULLUP);
@@ -37,45 +33,29 @@ void setup() {
   pinMode(7,INPUT_PULLUP);
   pinMode(8,INPUT_PULLUP);
   
-  // Various initialization processes needed (such as reading adress pins, enabling general call, and using builtin led for control purposes)
+  digitalWrite(LED_BUILTIN,HIGH);
+  delay(500);
+  digitalWrite(LED_BUILTIN,LOW);
+
   
+  // Various initialization processes needed (such as reading adress pins, enabling general call, and using builtin led for control purposes)
+
   for (int i=2; i <= 8; i++){
     bitWrite(address, n, !digitalRead(i));
     n++;
-  } //reading the address coded in digital ports from 2 to 8
+  }//reading the address coded in digital ports from 2 to 8
   
   elements[0].endereco=address;  //Saving own address
   Wire.begin(address);  //Initialize I2C comunication
-  bitSet(TWAR, TWGCE);
+  bitSet(TWAR, TWGCE);  //Enable general call
   Wire.onReceive(receiveEvent);
 
   delay(100);
   
-  while (control != 0){
-    Wire.beginTransmission(0);
-    Wire.write('E');
-    Wire.write(address);        
-    control = Wire.endTransmission(true);
-  }
-  control=1;
-
-  t_0=micros();
-  while(diff<500000)
-  {
-    diff=micros()-t_0;
-  }
-
-  
-  sort_copy(&elements[0],found_elements);
-
-
-  //Calibration
-  calibracao(&elements[0],found_elements);
-  
-  
-  
+  propagate_address(address);               //Propagates the address so its know by everyone
+  sort_copy(&elements[0],found_elements);   //Sort found addresses for use in calibration
+  calibracao(&elements[0],found_elements);  //Calibration
   Serial.println("Setup ended");
-  //digitalWrite(LED_BUILTIN,HIGH);
    
 }
 
@@ -155,7 +135,7 @@ void calibracao (arduino_info* elements, int found_elements){
   
   while (calibre_count<found_elements){
     if (elements[calibre_count].endereco == address){
-      analogWrite(LedPin,255);  //liga led
+      analogWrite(LedPin,PWM_Calibre);  //liga led
       
       t_0=micros();//Waits to ensure everything is read (se calhar considerar resposta para garantir comunicação)
       diff=0;
@@ -200,7 +180,34 @@ void calibracao (arduino_info* elements, int found_elements){
     }
   
   }
+  for (int i=0;i<found_elements;i++){
+    elements[i].ganho=transform_ADC_in_lux(elements[i].ganho)/PWM_Calibre;
+  }
 }
 
+void propagate_address(int address){
+  while (control != 0){
+    Wire.beginTransmission(0);
+    Wire.write('E');
+    Wire.write(address);        
+    control = Wire.endTransmission(true);
+  }
+  control=1;
 
+  t_0=micros();
+  while(diff<500000)
+  {
+    diff=micros()-t_0;
+  }
+}
 
+double transform_ADC_in_lux(double sensorValue){
+  double V_sensorValue=0, R_LDR=0, lux=0;
+  double m = -1.2618595, b = 2.54480706;
+
+  V_sensorValue = (5*sensorValue/1023);
+  R_LDR = (10/V_sensorValue)*(5-V_sensorValue);
+  lux = pow(10,b)*pow(R_LDR,m);
+  return lux;
+  
+}
